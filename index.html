@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PS99 RAP Detector — Inflation & Manipulation Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="scanline-overlay"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-gem">💎</div>
+        <div>
+          <div class="logo-title">PS99 RAP DETECTOR</div>
+          <div class="logo-sub">Inflation &amp; Manipulation Scanner</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="api-status" id="apiStatus">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Connecting…</span>
+        </div>
+        <div class="last-refresh" id="lastRefresh"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Search Bar -->
+    <section class="search-section">
+      <div class="search-wrap">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search pet name… e.g. Huge Hacked Cat, Titanic Dominus"
+            autocomplete="off"
+          />
+          <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear">✕</button>
+        </div>
+        <div class="search-filters">
+          <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">All</button>
+          <button class="filter-btn" data-filter="huge" onclick="setFilter(this,'huge')">Huge</button>
+          <button class="filter-btn" data-filter="titanic" onclick="setFilter(this,'titanic')">Titanic</button>
+          <button class="filter-btn" data-filter="exclusive" onclick="setFilter(this,'exclusive')">Exclusive</button>
+          <button class="filter-btn warn" data-filter="flagged" onclick="setFilter(this,'flagged')">🚨 Flagged Only</button>
+        </div>
+        <div class="variant-filters">
+          <label class="variant-toggle">
+            <input type="checkbox" id="showGolden" onchange="applyFilters()"> 🟡 Golden
+          </label>
+          <label class="variant-toggle">
+            <input type="checkbox" id="showRainbow" onchange="applyFilters()"> 🌈 Rainbow
+          </label>
+          <label class="variant-toggle">
+            <input type="checkbox" id="showShiny" onchange="applyFilters()"> ✨ Shiny
+          </label>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+          <span class="stat-num" id="statTotal">—</span>
+          <span class="stat-label">Pets Loaded</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num warn" id="statFlagged">—</span>
+          <span class="stat-label">Flagged</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="statShowing">—</span>
+          <span class="stat-label">Showing</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="statNextRefresh">—</span>
+          <span class="stat-label">Next Refresh</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alert Banner (for flagged pets summary) -->
+    <div class="alert-banner" id="alertBanner" style="display:none;">
+      <span class="alert-icon">⚠️</span>
+      <span id="alertText"></span>
+    </div>
+
+    <!-- Pet Grid -->
+    <section class="grid-section">
+      <div class="pet-grid" id="petGrid">
+        <!-- Loaded by JS -->
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon">🔎</div>
+        <div class="empty-title">No pets found</div>
+        <div class="empty-sub">Try a different name or remove filters</div>
+      </div>
+      <div class="loading-state" id="loadingState">
+        <div class="loading-gem">💎</div>
+        <div class="loading-text">Fetching live data from Big Games API…</div>
+        <div class="loading-bar"><div class="loading-fill" id="loadingFill"></div></div>
+      </div>
+    </section>
+
+    <!-- Pet Detail Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+      <div class="modal" id="modal">
+        <button class="modal-close" onclick="closeModalDirect()">✕</button>
+
+        <div class="modal-header">
+          <div class="modal-img-wrap">
+            <img class="modal-img" id="modalImg" src="" alt="" />
+          </div>
+          <div class="modal-title-block">
+            <div class="modal-pet-name" id="modalName">—</div>
+            <div class="modal-variant" id="modalVariant"></div>
+            <div class="modal-verdict" id="modalVerdict"></div>
+          </div>
+        </div>
+
+        <!-- Manipulation Meter -->
+        <div class="modal-meter-wrap">
+          <div class="meter-labels">
+            <span>SAFE</span>
+            <span>MANIPULATION INDEX</span>
+            <span>INFLATED</span>
+          </div>
+          <div class="meter-track">
+            <div class="meter-zone green"></div>
+            <div class="meter-zone yellow"></div>
+            <div class="meter-zone red"></div>
+            <div class="meter-needle" id="modalNeedle"></div>
+          </div>
+          <div class="meter-score-row">
+            <span class="meter-score" id="modalScore">0</span><span class="meter-score-sub">/100</span>
+          </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="modal-data-grid" id="modalDataGrid"></div>
+
+        <!-- Flags -->
+        <div class="modal-flags" id="modalFlags"></div>
+
+        <!-- Snapshot history note -->
+        <div class="modal-history" id="modalHistory"></div>
+
+        <!-- Summary -->
+        <div class="modal-summary" id="modalSummary"></div>
+
+        <div class="modal-footer">
+          Data sourced from <a href="https://ps99.biggamesapi.io" target="_blank" rel="noopener">ps99.biggamesapi.io</a> · RAP cached 4h by Big Games
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>PS99 RAP Detector · Not affiliated with BIG Games or Roblox · For informational use only</p>
+    <p>RAP data from <a href="https://ps99.biggamesapi.io" target="_blank" rel="noopener">ps99.biggamesapi.io</a> · Exists data updated hourly</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
