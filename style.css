@@ -1,259 +1,66 @@
-/* ===========================
-   PS99 RAP Monitor Pro
-=========================== */
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f0f0f;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
 }
 
-body{
-    background:#0f172a;
-    color:#ffffff;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+.container {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-/* Navbar */
-
-.navbar{
-    background:#111827 !important;
+h1 {
+  text-align: center;
+  color: #00ff88;
 }
 
-/* Dashboard */
-
-.dashboard-card{
-
-    background:#1e293b;
-
-    border-radius:18px;
-
-    padding:18px;
-
-    text-align:center;
-
-    box-shadow:0 10px 20px rgba(0,0,0,.25);
-
-    transition:.25s;
-
+.updated {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.9em;
 }
 
-.dashboard-card:hover{
-
-    transform:translateY(-4px);
-
+#loading {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.1em;
 }
 
-.dashboard-card h2{
-
-    color:#38bdf8;
-
-    font-weight:700;
-
+.results {
+  display: grid;
+  gap: 12px;
 }
 
-.dashboard-card p{
-
-    color:#94a3b8;
-
-    margin:0;
-
+.rap-item {
+  background: #1a1a1a;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #00ff88;
 }
 
-/* Search */
-
-#search{
-
-    background:#1e293b;
-
-    color:white;
-
-    border:none;
-
-    border-radius:15px;
-
-    padding:15px;
-
+.item-info small {
+  color: #888;
 }
 
-#search::placeholder{
-
-    color:#94a3b8;
-
+.value {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #00ff88;
 }
 
-#search:focus{
-
-    background:#26354b;
-
-    color:white;
-
-    outline:none;
-
-    box-shadow:none;
-
-}
-
-/* Filter Buttons */
-
-.filters{
-
-    display:flex;
-
-    flex-wrap:wrap;
-
-    gap:10px;
-
-}
-
-/* Status */
-
-#status{
-
-    font-size:18px;
-
-}
-
-/* RAP Card */
-
-.item-card .card{
-
-    background:#1e293b;
-
-    border:none;
-
-    border-radius:18px;
-
-    overflow:hidden;
-
-    color:white;
-
-    transition:.25s;
-
-}
-
-.item-card .card:hover{
-
-    transform:translateY(-5px);
-
-}
-
-.item-card img{
-
-    width:100%;
-
-    height:180px;
-
-    object-fit:contain;
-
-    background:#111827;
-
-    padding:15px;
-
-}
-
-.item-name{
-
-    font-size:20px;
-
-    font-weight:bold;
-
-}
-
-.item-type{
-
-    color:#94a3b8;
-
-}
-
-.item-rap{
-
-    color:#38bdf8;
-
-    font-size:26px;
-
-    font-weight:bold;
-
-    margin-top:10px;
-
-}
-
-/* Badges */
-
-.badge-normal{
-
-    background:#16a34a;
-
-}
-
-.badge-watch{
-
-    background:#d97706;
-
-}
-
-.badge-inflated{
-
-    background:#dc2626;
-
-}
-
-/* Loading */
-
-.loading{
-
-    text-align:center;
-
-    margin-top:60px;
-
-    font-size:22px;
-
-    color:#94a3b8;
-
-}
-
-/* Scrollbar */
-
-::-webkit-scrollbar{
-
-    width:8px;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:#334155;
-
-    border-radius:20px;
-
-}
-
-/* Mobile */
-
-@media(max-width:768px){
-
-.dashboard-card h2{
-
-font-size:22px;
-
-}
-
-.item-card img{
-
-height:150px;
-
-}
-
-.item-name{
-
-font-size:18px;
-
-}
-
-.item-rap{
-
-font-size:22px;
-
-}
-
+.refresh-btn {
+  display: block;
+  margin: 20px auto;
+  padding: 12px 24px;
+  background: #00ff88;
+  color: black;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
 }
