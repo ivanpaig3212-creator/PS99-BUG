@@ -1,71 +1,121 @@
+* { margin:0; padding:0; box-sizing:border-box; }
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f0f0f;
-  color: #fff;
-  margin: 0;
-  padding: 20px;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
 }
 
-.container { max-width: 900px; margin: 0 auto; }
+.header {
+  text-align: center;
+  padding: 30px 20px 20px;
+  background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
+  border-bottom: 1px solid #333;
+}
 
 h1 {
-  text-align: center;
-  color: #ff4444;
-  margin-bottom: 5px;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: white;
+}
+
+.highlight { color: #ff4757; }
+
+.subtitle {
+  color: #888;
+  margin-top: 8px;
+  font-size: 1.1rem;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .updated {
   text-align: center;
-  color: #888;
-  font-size: 0.95em;
+  color: #22ff88;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
 }
 
-#loading { text-align: center; padding: 30px; font-size: 1.1em; }
+#loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #888;
+}
 
 .results {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.rap-item {
-  background: #1a1a1a;
-  padding: 16px;
+.item-row {
+  background: #161616;
   border-radius: 12px;
+  padding: 16px 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-left: 5px solid #ff4444;
+  justify-content: space-between;
+  border: 1px solid #333;
+  transition: all 0.2s;
+}
+
+.item-row:hover {
+  border-color: #ff4757;
+  transform: translateX(4px);
 }
 
 .item-info {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
-.pet-img {
-  width: 70px;
-  height: 70px;
+.item-img {
+  width: 64px;
+  height: 64px;
   object-fit: contain;
   background: #222;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
-.value {
-  font-size: 1.4em;
-  font-weight: bold;
-  color: #ffdd00;
+.item-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.item-category {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.stats {
   text-align: right;
+}
+
+.stats strong {
+  color: #ffd700;
+  font-size: 1.25rem;
+}
+
+.exists {
+  color: #22ff88;
+  font-size: 0.9rem;
 }
 
 .refresh-btn {
   display: block;
-  margin: 25px auto;
-  padding: 14px 28px;
-  background: #ff4444;
+  margin: 30px auto;
+  padding: 14px 32px;
+  background: #ff4757;
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
+  border-radius: 9999px;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
 }
