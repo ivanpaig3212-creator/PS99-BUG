@@ -1,127 +1,67 @@
-// ==========================
-// PS99 RAP Monitor Pro
-// ==========================
+// app.js - Live RAP Fetcher for Pet Simulator 99
 
-const itemContainer = document.getElementById("itemContainer");
-const searchInput = document.getElementById("search");
+const API_BASE = "https://ps99.biggamesapi.io";
 
-let items = [];
+async function fetchLiveRAP() {
+    const loadingEl = document.getElementById('loading');
+    const resultsEl = document.getElementById('results');
+    const lastUpdatedEl = document.getElementById('last-updated');
 
-// Your Vercel API
-const API_URL = "/api/rap";
-
-function formatNumber(num) {
-    if (num >= 1000000000) return (num / 1000000000).toFixed(2) + "B";
-    if (num >= 1000000) return (num / 1000000).toFixed(2) + "M";
-    if (num >= 1000) return (num / 1000).toFixed(2) + "K";
-    return num;
-}
-
-function inflation(item) {
-    if (!item.previous || item.previous === 0) return 0;
-    return ((item.rap - item.previous) / item.previous) * 100;
-}
-
-function render(list) {
-
-    itemContainer.innerHTML = "";
-
-    document.getElementById("totalItems").textContent = list.length;
-
-    let inflated = 0;
-
-    list.forEach(item => {
-
-        const percent = inflation(item);
-
-        let badge = "Normal";
-        let color = "badge-normal";
-
-        if (percent >= 20) {
-            badge = "Inflated";
-            color = "badge-inflated";
-            inflated++;
-        }
-
-        itemContainer.innerHTML += `
-        <div class="col-md-4 col-lg-3 item-card">
-            <div class="card">
-
-                <img src="${item.image || "https://placehold.co/300x300?text=PS99"}">
-
-                <div class="card-body">
-
-                    <div class="item-name">
-                        ${item.name}
-                    </div>
-
-                    <div class="text-secondary">
-                        ${item.type || "Unknown"}
-                    </div>
-
-                    <div class="item-rap">
-                        💎 ${formatNumber(item.rap)}
-                    </div>
-
-                    <div class="mt-2">
-                        <span class="badge ${color}">
-                            ${badge}
-                        </span>
-                    </div>
-
-                    <div class="mt-2">
-                        ${percent.toFixed(1)}%
-                    </div>
-
-                </div>
-
-            </div>
-        </div>
-        `;
-    });
-
-    document.getElementById("inflatedItems").textContent = inflated;
-    document.getElementById("updatedTime").textContent = new Date().toLocaleTimeString();
-}
-
-async function loadData() {
+    loadingEl.style.display = 'block';
+    resultsEl.innerHTML = '';
 
     try {
+        // Fetch RAP data
+        const rapResponse = await fetch(`${API_BASE}/api/rap`);
+        const rapData = await rapResponse.json();
 
-        const response = await fetch(API_URL);
+        // Fetch Exists (supply) data
+        const existsResponse = await fetch(`${API_BASE}/api/exists`);
+        const existsData = await existsResponse.json();
 
-        const data = await response.json();
+        if (rapData.status !== "ok") throw new Error("Failed to load RAP");
 
-        items = data.items;
+        loadingEl.style.display = 'none';
 
-        render(items);
+        // Display last updated time
+        const now = new Date();
+        lastUpdatedEl.textContent = `Last updated: ${now.toLocaleTimeString()}`;
 
-    } catch (err) {
+        // Render RAP items
+        rapData.data.slice(0, 100).forEach(item => {  // Show top 100
+            const div = document.createElement('div');
+            div.className = "rap-item";
+            
+            const name = item.configData.id || "Unknown";
+            const category = item.category || "Item";
+            const value = item.value.toLocaleString();
 
-        console.error(err);
+            div.innerHTML = `
+                <div class="item-info">
+                    <strong>${name}</strong>
+                    <small>${category}</small>
+                </div>
+                <div class="value">${value} 💎</div>
+            `;
+            resultsEl.appendChild(div);
+        });
 
-        itemContainer.innerHTML =
-            "<h3 style='color:red'>Failed to load API.</h3>";
-
+    } catch (error) {
+        console.error(error);
+        loadingEl.style.display = 'none';
+        resultsEl.innerHTML = `
+            <p style="color: red; text-align: center;">
+                ❌ Failed to fetch live data.<br>
+                Please check your connection and try again.
+            </p>`;
     }
-
 }
 
-// Search
-searchInput.addEventListener("input", () => {
+// Auto-refresh every 60 seconds
+function startAutoRefresh() {
+    fetchLiveRAP();
+    setInterval(fetchLiveRAP, 60000); // 1 minute
+}
 
-    const value = searchInput.value.toLowerCase();
-
-    render(
-        items.filter(item =>
-            item.name.toLowerCase().includes(value)
-        )
-    );
-
-});
-
-// Load immediately
-loadData();
-
-// Refresh every 30 seconds
-setInterval(loadData, 30000);
+// Run when page loads
+document.addEventListener('DOMContentLoaded', startAutoRefresh);
