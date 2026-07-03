@@ -177,12 +177,12 @@ async function showItemModal(item) {
             <h2 style="margin-bottom:8px;">${item.name}</h2>
             <p style="color:#888;margin-bottom:15px;">${item.category} ${item.variant ? `• ${item.variant}` : ''}</p>
             
-            <div style="margin:20px 0;">
+            <div style="margin:20px 0; min-height: 320px; display: flex; align-items: center; justify-content: center;">
                 <canvas id="rapChart" width="650" height="320"></canvas>
             </div>
 
             <div style="text-align:center;margin-bottom:15px;">
-                <small style="color:#666;">Data from ps99rap.com</small>
+                <small style="color:#666;">Trying to load history from ps99rap.com...</small>
             </div>
 
             <button onclick="this.closest('.modal').remove()" 
@@ -195,21 +195,38 @@ async function showItemModal(item) {
 
     // Fetch real RAP history using CORS proxy
     try {
-        const proxyUrl = `https://corsproxy.io/?https://ps99rap.com/api/item/${item.originalName}/rap_history`;
-        
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+            `https://ps99rap.com/api/item/${item.originalName}/rap_history`
+        )}`;
+
         const res = await fetch(proxyUrl);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const data = await res.json();
 
-        if (data.success && data.data && data.data.length > 0) {
+        if (data && data.success && data.data && data.data.length > 0) {
+            const canvas = document.getElementById('rapChart');
+            if (canvas) canvas.outerHTML = `<canvas id="rapChart" width="650" height="320"></canvas>`;
             drawRealChart(data.data);
         } else {
-            document.getElementById('rapChart').outerHTML = 
-                `<p style="text-align:center;color:#888;padding:40px;">No history data available for this item yet.</p>`;
+            document.getElementById('rapChart').outerHTML = `
+                <div style="text-align:center; padding: 60px 20px; color:#888;">
+                    <p>No historical data available for this item yet.</p>
+                    <p style="font-size:0.9rem; margin-top:10px;">This can happen with newer or less traded items.</p>
+                </div>
+            `;
         }
-    } catch (e) {
-        console.error(e);
-        document.getElementById('rapChart').outerHTML = 
-            `<p style="text-align:center;color:#ff6b6b;padding:40px;">Failed to load history from ps99rap.com</p>`;
+    } catch (error) {
+        console.error("History fetch error:", error);
+        document.getElementById('rapChart').outerHTML = `
+            <div style="text-align:center; padding: 60px 20px; color:#ff6b6b;">
+                <p>Failed to load history from ps99rap.com</p>
+                <p style="font-size:0.85rem; margin-top:8px; color:#888;">${error.message}</p>
+            </div>
+        `;
     }
 }
 
@@ -229,7 +246,7 @@ function drawRealChart(historyData) {
                 data: values,
                 borderColor: '#ff4757',
                 backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                borderWidth: 2,
+                borderWidth: 2.5,
                 tension: 0.3,
                 fill: true
             }]
@@ -240,8 +257,14 @@ function drawRealChart(historyData) {
                 legend: { display: false }
             },
             scales: {
-                y: { ticks: { color: '#aaa' } },
-                x: { ticks: { color: '#aaa', maxTicksLimit: 10 } }
+                y: { 
+                    ticks: { color: '#aaa' },
+                    grid: { color: '#333' }
+                },
+                x: { 
+                    ticks: { color: '#aaa', maxTicksLimit: 8 },
+                    grid: { color: '#333' }
+                }
             }
         }
     });
