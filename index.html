@@ -4,20 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PS99 RAP • Live Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="header">
     <h1>PS99 <span class="accent">RAP</span></h1>
-    <p class="subtitle">Live Market Tracker • Inflation Detector</p>
+    <p class="subtitle">Powered by ps99rap.com API • Real History</p>
   </div>
 
-  <!-- Search Bar -->
   <div class="search-container">
-    <input type="text" id="search" placeholder="Search pets, enchants, charms, gifts..." onkeyup="filterItems()">
+    <input type="text" id="search" placeholder="Search pets, enchants, charms..." onkeyup="filterItems()">
   </div>
 
-  <!-- Category Tabs -->
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('all')">All</button>
     <button class="tab-btn" onclick="switchTab('Pet')">Pets</button>
@@ -25,13 +24,13 @@
     <button class="tab-btn" onclick="switchTab('Charm')">Charms</button>
     <button class="tab-btn" onclick="switchTab('Egg')">Eggs</button>
     <button class="tab-btn" onclick="switchTab('Gift')">Gifts</button>
-    <button class="tab-btn" onclick="switchTab('Exclusive')">Exclusive</button>
-    <button class="tab-btn inflated-tab" onclick="switchTab('inflated')">🔥 Inflated Only</button>
+    <button class="tab-btn inflated-tab" onclick="switchTab('inflated')">🔥 Inflated</button>
+    <button class="tab-btn" onclick="switchTab('deflated')">📉 Deflated</button>
   </div>
 
   <div class="container">
     <p id="last-updated" class="updated"></p>
-    <div id="loading">Loading live data from Big Games API...</div>
+    <div id="loading">Loading from ps99rap.com...</div>
     <div id="results" class="results"></div>
   </div>
 
