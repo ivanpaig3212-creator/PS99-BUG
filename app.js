@@ -36,9 +36,11 @@ async function fetchLiveRAP() {
             const previousRap = previousData[name] || rap;
             const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
 
-            // Smart Inflation Detection - 15%+ jump
-            const isInflated = changePercent >= 15;
+            // 10% threshold for both inflation and deflation
+            const isInflated = changePercent >= 10;
+            const isDeflated = changePercent <= -10;
 
+            // Auto categorize
             const lowerName = name.toLowerCase();
             if (lowerName.includes('gift') || lowerName.includes('present')) category = 'Gift';
             if (lowerName.includes('exclusive') || lowerName.includes('limited')) category = 'Exclusive';
@@ -51,10 +53,12 @@ async function fetchLiveRAP() {
                 previousRap,
                 changePercent: Math.round(changePercent),
                 isInflated,
+                isDeflated,
                 thumbnail: rapItem.configData?.thumbnail || ""
             };
         });
 
+        // Save current data for next comparison
         const newPreviousData = {};
         allItems.forEach(item => newPreviousData[item.name] = item.rap);
         localStorage.setItem('ps99_previous_rap', JSON.stringify(newPreviousData));
@@ -79,12 +83,23 @@ function renderItems(items) {
             : "https://via.placeholder.com/60";
 
         const div = document.createElement('div');
-        div.className = `item-row ${item.isInflated ? 'inflated' : ''}`;
+        div.className = `item-row ${item.isInflated ? 'inflated' : ''} ${item.isDeflated ? 'deflated' : ''}`;
 
+        // Percentage change display
         let changeHTML = '';
         if (item.changePercent !== 0) {
-            const color = item.changePercent > 0 ? '#22ff88' : '#ff6b6b';
-            changeHTML = `<div style="color:${color}; font-size:0.85rem;">${item.changePercent > 0 ? '+' : ''}${item.changePercent}% since last check</div>`;
+            const isPositive = item.changePercent > 0;
+            const color = isPositive ? '#22ff88' : '#ff6b6b';
+            const arrow = isPositive ? '▲' : '▼';
+            changeHTML = `<div style="color:${color}; font-size:0.9rem; font-weight:600;">${arrow} ${item.changePercent}%</div>`;
+        }
+
+        // Badges
+        let badgeHTML = '';
+        if (item.isInflated) {
+            badgeHTML = `<div class="inflated-badge">🔥 INFLATED</div>`;
+        } else if (item.isDeflated) {
+            badgeHTML = `<div class="deflated-badge">📉 DEFLATED</div>`;
         }
 
         div.innerHTML = `
@@ -99,7 +114,7 @@ function renderItems(items) {
                 <div class="rap">${item.rap.toLocaleString()} 💎</div>
                 <div class="exists">${item.exists.toLocaleString()} exist</div>
                 ${changeHTML}
-                ${item.isInflated ? `<div class="inflated-badge">🔥 LIKELY INFLATED</div>` : ''}
+                ${badgeHTML}
             </div>
         `;
         results.appendChild(div);
@@ -112,6 +127,8 @@ function filterItems() {
 
     if (currentTab === 'inflated') {
         filtered = filtered.filter(item => item.isInflated);
+    } else if (currentTab === 'deflated') {
+        filtered = filtered.filter(item => item.isDeflated);
     } else if (currentTab !== 'all') {
         filtered = filtered.filter(item => item.category === currentTab);
     }
