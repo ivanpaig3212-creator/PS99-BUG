@@ -70,11 +70,10 @@ async function fetchLiveRAP() {
                     thumbnail: config.thumbnail || config.goldenThumbnail || ""
                 };
             })
-            // Filter: Remove basic stat pets + farmable enchants/charms/items
+            // Filter logic
             .filter(item => {
                 const lowerName = item.originalName.toLowerCase();
 
-                // Pets: Keep only Huges, Titanics, Gargantuans + variants
                 if (item.category === "Pet") {
                     const isSpecialPet = item.variant || 
                                          lowerName.includes("huge") ||
@@ -83,23 +82,19 @@ async function fetchLiveRAP() {
                     return isSpecialPet;
                 }
 
-                // Enchants: Only keep exclusive ones
                 if (item.category === "Enchant") {
                     return lowerName.includes("exclusive");
                 }
 
-                // Charms & Items: Remove farmable ones
                 if (item.category === "Charm" || item.category === "Item" || item.category === "MiscItems") {
                     return lowerName.includes("exclusive") || 
                            lowerName.includes("limited") || 
                            lowerName.includes("event");
                 }
 
-                // Keep everything else (Gifts, Eggs, etc.)
                 return true;
             });
 
-        // Save previous data every 30 minutes
         if (now - lastSavedTime > THIRTY_MINUTES) {
             const newData = {};
             allItems.forEach(item => newData[item.name] = item.rap);
@@ -173,45 +168,21 @@ function renderItems(items) {
     });
 }
 
-function showItemModal(item) {
+async function showItemModal(item) {
     const modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
     
-    const previousText = item.previousRap > 0 
-        ? `${item.previousRap.toLocaleString()} 💎` 
-        : 'No previous data yet (first time opening)';
-
     modal.innerHTML = `
-        <div style="background:#1a1a1a;padding:25px;border-radius:16px;max-width:520px;width:92%;border:1px solid #333;">
+        <div style="background:#1a1a1a;padding:25px;border-radius:16px;max-width:700px;width:95%;border:1px solid #333;">
             <h2 style="margin-bottom:8px;">${item.name}</h2>
             <p style="color:#888;margin-bottom:15px;">${item.category} ${item.variant ? `• ${item.variant}` : ''}</p>
             
-            <div style="display:flex;justify-content:space-between;margin-bottom:20px;gap:20px;">
-                <div>
-                    <div style="color:#888;font-size:0.85rem;">Current RAP</div>
-                    <div style="font-size:1.7rem;font-weight:bold;color:#ffd700;">${item.rap.toLocaleString()} 💎</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="color:#888;font-size:0.85rem;">Exists</div>
-                    <div style="font-size:1.3rem;color:#22ff88;">${item.exists.toLocaleString()}</div>
-                </div>
+            <div style="margin:20px 0;">
+                <canvas id="rapChart" width="650" height="320"></canvas>
             </div>
 
-            <div style="background:#111;padding:15px;border-radius:10px;margin-bottom:15px;">
-                <div style="color:#888;font-size:0.85rem;margin-bottom:4px;">Previous RAP (last check)</div>
-                <div style="font-size:1.3rem;color:#ccc;">${previousText}</div>
-                
-                <div style="margin-top:10px;">
-                    <div style="color:#888;font-size:0.85rem;">Change</div>
-                    <div style="font-size:1.4rem;font-weight:700;color:${item.changePercent >= 0 ? '#22ff88' : '#ff6b6b'}">
-                        ${item.changePercent >= 0 ? '▲' : '▼'} ${item.changePercent}%
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:#0f0f0f;padding:12px;border-radius:8px;margin-bottom:20px;font-size:0.85rem;color:#aaa;text-align:center;">
-                📊 Full RAP history chart is available on <strong>ps99rap.com</strong><br>
-                (This site shows change since your last visit)
+            <div style="text-align:center;margin-bottom:15px;">
+                <small style="color:#666;">Data from ps99rap.com</small>
             </div>
 
             <button onclick="this.closest('.modal').remove()" 
@@ -221,6 +192,59 @@ function showItemModal(item) {
         </div>
     `;
     document.body.appendChild(modal);
+
+    // Fetch real RAP history using CORS proxy
+    try {
+        const proxyUrl = `https://corsproxy.io/?https://ps99rap.com/api/item/${item.originalName}/rap_history`;
+        
+        const res = await fetch(proxyUrl);
+        const data = await res.json();
+
+        if (data.success && data.data && data.data.length > 0) {
+            drawRealChart(data.data);
+        } else {
+            document.getElementById('rapChart').outerHTML = 
+                `<p style="text-align:center;color:#888;padding:40px;">No history data available for this item yet.</p>`;
+        }
+    } catch (e) {
+        console.error(e);
+        document.getElementById('rapChart').outerHTML = 
+            `<p style="text-align:center;color:#ff6b6b;padding:40px;">Failed to load history from ps99rap.com</p>`;
+    }
+}
+
+function drawRealChart(historyData) {
+    const ctx = document.getElementById('rapChart');
+    if (!ctx) return;
+
+    const labels = historyData.map(h => new Date(h[0] * 1000).toLocaleDateString());
+    const values = historyData.map(h => h[1]);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'RAP History',
+                data: values,
+                borderColor: '#ff4757',
+                backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { ticks: { color: '#aaa' } },
+                x: { ticks: { color: '#aaa', maxTicksLimit: 10 } }
+            }
+        }
+    });
 }
 
 function filterItems() {
