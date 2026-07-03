@@ -70,11 +70,11 @@ async function fetchLiveRAP() {
                     thumbnail: config.thumbnail || config.goldenThumbnail || ""
                 };
             })
-            // Filter logic
+            // Filter: Remove basic stat pets + farmable enchants/charms/items
             .filter(item => {
                 const lowerName = item.originalName.toLowerCase();
 
-                // === PETS: Keep Huges, Titanics, Gargantuans + variants ===
+                // Pets: Keep only Huges, Titanics, Gargantuans + variants
                 if (item.category === "Pet") {
                     const isSpecialPet = item.variant || 
                                          lowerName.includes("huge") ||
@@ -83,14 +83,13 @@ async function fetchLiveRAP() {
                     return isSpecialPet;
                 }
 
-                // === ENCHANTS: Only keep exclusive ones ===
+                // Enchants: Only keep exclusive ones
                 if (item.category === "Enchant") {
                     return lowerName.includes("exclusive");
                 }
 
-                // === CHARMS & ITEMS: Remove farmable ones (keep only special if any) ===
+                // Charms & Items: Remove farmable ones
                 if (item.category === "Charm" || item.category === "Item" || item.category === "MiscItems") {
-                    // Keep only if it looks special/limited
                     return lowerName.includes("exclusive") || 
                            lowerName.includes("limited") || 
                            lowerName.includes("event");
@@ -100,7 +99,7 @@ async function fetchLiveRAP() {
                 return true;
             });
 
-        // Save previous data
+        // Save previous data every 30 minutes
         if (now - lastSavedTime > THIRTY_MINUTES) {
             const newData = {};
             allItems.forEach(item => newData[item.name] = item.rap);
@@ -180,7 +179,7 @@ function showItemModal(item) {
     
     const previousText = item.previousRap > 0 
         ? `${item.previousRap.toLocaleString()} 💎` 
-        : 'No previous data yet';
+        : 'No previous data yet (first time opening)';
 
     modal.innerHTML = `
         <div style="background:#1a1a1a;padding:25px;border-radius:16px;max-width:520px;width:92%;border:1px solid #333;">
@@ -199,7 +198,7 @@ function showItemModal(item) {
             </div>
 
             <div style="background:#111;padding:15px;border-radius:10px;margin-bottom:15px;">
-                <div style="color:#888;font-size:0.85rem;margin-bottom:4px;">Previous RAP</div>
+                <div style="color:#888;font-size:0.85rem;margin-bottom:4px;">Previous RAP (last check)</div>
                 <div style="font-size:1.3rem;color:#ccc;">${previousText}</div>
                 
                 <div style="margin-top:10px;">
@@ -208,6 +207,11 @@ function showItemModal(item) {
                         ${item.changePercent >= 0 ? '▲' : '▼'} ${item.changePercent}%
                     </div>
                 </div>
+            </div>
+
+            <div style="background:#0f0f0f;padding:12px;border-radius:8px;margin-bottom:20px;font-size:0.85rem;color:#aaa;text-align:center;">
+                📊 Full RAP history chart is available on <strong>ps99rap.com</strong><br>
+                (This site shows change since your last visit)
             </div>
 
             <button onclick="this.closest('.modal').remove()" 
