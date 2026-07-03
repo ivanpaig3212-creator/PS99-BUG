@@ -1,5 +1,5 @@
-// app.js - Professional PS99 Inflated RAP Tracker
 const API_BASE = "https://ps99.biggamesapi.io";
+let allItems = [];
 
 async function fetchLiveRAP() {
     const loading = document.getElementById('loading');
@@ -18,81 +18,82 @@ async function fetchLiveRAP() {
         const rapData = await rapRes.json();
         const existsData = await existsRes.json();
 
-        lastUpdated.textContent = `Live • Updated ${new Date().toLocaleTimeString()}`;
+        lastUpdated.textContent = `Live • ${new Date().toLocaleTimeString()}`;
 
-        // Combine and filter for likely inflated items
-        const items = rapData.data.map(rapItem => {
+        allItems = rapData.data.map(rapItem => {
             const existsItem = existsData.data.find(e => 
                 e.configData?.id === rapItem.configData?.id
             );
-            
+
             const rap = rapItem.value || 0;
             const exists = existsItem?.value || 0;
             const name = rapItem.configData?.id || "Unknown";
-            const category = rapItem.category || "Item";
+            const category = rapItem.category || "Misc";
 
-            // Score for "inflated" detection (high RAP + relatively low supply)
-            const inflatedScore = exists > 0 ? (rap / exists) : rap;
+            // Inflated Detector Logic
+            const rapPerExist = exists > 0 ? rap / exists : 0;
+            const isInflated = rap > 1_000_000 && (rapPerExist > 1000 || rap > 50_000_000);
 
             return {
-                ...rapItem,
-                exists: exists,
-                inflatedScore: inflatedScore,
-                name: name,
-                category: category
+                name,
+                category,
+                rap,
+                exists,
+                isInflated,
+                thumbnail: rapItem.configData?.thumbnail || ""
             };
         });
 
-        // Filter: High value OR suspicious ratio (likely manipulated)
-        const suspiciousItems = items
-            .filter(item => item.rap > 500_000) // Minimum RAP
-            .sort((a, b) => b.inflatedScore - a.inflatedScore); // Most suspicious first
-
+        renderItems(allItems);
         loading.style.display = 'none';
 
-        if (suspiciousItems.length === 0) {
-            results.innerHTML = "<p>No suspicious activity detected right now.</p>";
-            return;
-        }
-
-        suspiciousItems.forEach(item => {
-            const rap = item.value.toLocaleString();
-            const exists = item.exists.toLocaleString();
-            const name = item.name;
-            const category = item.category;
-
-            const thumbnail = item.configData?.thumbnail || "";
-            const imageUrl = thumbnail 
-                ? `https://ps99.biggamesapi.io/image/${thumbnail.split(':').pop()}`
-                : "https://via.placeholder.com/64?text=Item";
-
-            const div = document.createElement('div');
-            div.className = "item-row";
-            div.innerHTML = `
-                <div class="item-info">
-                    <img src="${imageUrl}" alt="${name}" class="item-img" onerror="this.style.display='none'">
-                    <div>
-                        <div class="item-name">${name}</div>
-                        <div class="item-category">${category}</div>
-                    </div>
-                </div>
-                <div class="stats">
-                    <div><strong>${rap}</strong> 💎</div>
-                    <div class="exists">${exists} exist</div>
-                </div>
-            `;
-            results.appendChild(div);
-        });
-
-    } catch (err) {
-        console.error(err);
+    } catch (e) {
+        console.error(e);
         loading.style.display = 'none';
-        results.innerHTML = `<p style="color:#ff6b6b;text-align:center;">Error loading data. Please refresh.</p>`;
+        results.innerHTML = `<p style="color:#ff6b6b;text-align:center;padding:40px;">Failed to load data</p>`;
     }
 }
 
-// Auto refresh
-document.addEventListener('DOMContentLoaded', () => {
-    fetchLiveRAP();
-    setInterval(fetchLiveRAP, 45000); // every 45 seconds
-});
+function renderItems(items) {
+    const results = document.getElementById('results');
+    results.innerHTML = '';
+
+    items.forEach(item => {
+        const imageUrl = item.thumbnail 
+            ? `https://ps99.biggamesapi.io/image/${item.thumbnail.split(':').pop()}`
+            : "https://via.placeholder.com/60";
+
+        const div = document.createElement('div');
+        div.className = `item-row ${item.isInflated ? 'inflated' : ''}`;
+        div.innerHTML = `
+            <div class="item-info">
+                <img src="${imageUrl}" class="item-img" onerror="this.style.display='none'">
+                <div>
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-category">${item.category}</div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="rap">${item.rap.toLocaleString()} 💎</div>
+                <div class="exists">${item.exists.toLocaleString()} exist</div>
+                ${item.isInflated ? `<div class="inflated-badge">🔥 INFLATED</div>` : ''}
+            </div>
+        `;
+        results.appendChild(div);
+    });
+}
+
+function filterCategory(cat) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    if (cat === 'all') {
+        renderItems(allItems);
+    } else {
+        const filtered = allItems.filter(item => item.category === cat);
+        renderItems(filtered);
+    }
+}
+
+// Start
+document.addEventListener('DOMContentLoaded', fetchLiveRAP);
