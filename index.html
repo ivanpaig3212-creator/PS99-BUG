@@ -3,21 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PS99 Inflated RAP</title>
+  <title>PS99 Inflated • Live RAP</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="header">
+    <h1>PS99 <span class="highlight">INFLATED</span></h1>
+    <p class="subtitle">Market Manipulation & High RAP Tracker</p>
+  </div>
+
   <div class="container">
-    <h1>🔥 PS99 Inflated / High RAP Pets</h1>
     <p id="last-updated" class="updated"></p>
 
-    <div id="loading">Loading high-value pets...</div>
+    <div id="loading">Fetching market data...</div>
     
     <div id="results" class="results"></div>
 
-    <button onclick="fetchLiveRAP()" class="refresh-btn">
-      🔄 Refresh Now
-    </button>
+    <button onclick="fetchLiveRAP()" class="refresh-btn">Refresh Data</button>
   </div>
 
   <script src="app.js"></script>
