@@ -1,8 +1,186 @@
-/* Add these at the end of your style.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+.header {
+  text-align: center;
+  padding: 35px 20px 15px;
+  background: #111;
+  border-bottom: 2px solid #222;
+}
+
+h1 {
+  font-size: 2.6rem;
+  font-weight: 900;
+}
+
+.accent {
+  color: #ff4757;
+}
+
+.subtitle {
+  color: #777;
+  margin-top: 5px;
+}
+
+/* Search Bar */
+.search-container {
+  padding: 15px 20px;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+
+#search {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: block;
+  padding: 14px 20px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 9999px;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+}
+
+#search:focus {
+  border-color: #ff4757;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 15px 20px;
+  background: #111;
+  border-bottom: 1px solid #222;
+  justify-content: center;
+}
+
+.tab-btn {
+  padding: 9px 18px;
+  background: #1f1f1f;
+  border: none;
+  color: #ccc;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #ff4757;
+  color: white;
+  font-weight: 600;
+}
+
+.inflated-tab {
+  background: #3a1f1f;
+  color: #ff6b6b;
+}
+
+/* Container & Results */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.updated {
+  text-align: center;
+  color: #22ff88;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Item Row */
+.item-row {
+  background: #161616;
+  padding: 16px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #222;
+  transition: all 0.2s;
+}
+
+.item-row.inflated {
+  border-left: 5px solid #ff4757;
+  background: #1f1414;
+}
 
 .item-row.deflated {
   border-left: 5px solid #3b82f6;
   background: #141f2e;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.item-img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  background: #222;
+  border-radius: 10px;
+}
+
+.item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.item-category {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.stats {
+  text-align: right;
+}
+
+.rap {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.exists {
+  color: #22ff88;
+  font-size: 0.9rem;
+}
+
+/* Badges */
+.inflated-badge {
+  background: #ff4757;
+  color: white;
+  font-size: 0.75rem;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  margin-top: 6px;
+  display: inline-block;
+  font-weight: 600;
 }
 
 .deflated-badge {
