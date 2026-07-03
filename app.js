@@ -5,151 +5,123 @@
 const itemContainer = document.getElementById("itemContainer");
 const searchInput = document.getElementById("search");
 
-const sampleData = [
-{
-    name:"Huge Lucky Cat",
-    rap:620000,
-    previous:480000,
-    type:"Huge",
-    image:"https://placehold.co/300x300?text=Huge+Lucky+Cat"
-},
-{
-    name:"Titanic Blobfish",
-    rap:1280000000,
-    previous:1200000000,
-    type:"Titanic",
-    image:"https://placehold.co/300x300?text=Titanic"
-},
-{
-    name:"Chest Mimic",
-    rap:9500000,
-    previous:5200000,
-    type:"Item",
-    image:"https://placehold.co/300x300?text=Item"
-}
-];
+let items = [];
 
-let items = sampleData;
+// Your Vercel API
+const API_URL = "/api/rap";
 
-function formatNumber(num){
-
-    if(num>=1000000000)
-        return (num/1000000000).toFixed(2)+"B";
-
-    if(num>=1000000)
-        return (num/1000000).toFixed(2)+"M";
-
-    if(num>=1000)
-        return (num/1000).toFixed(2)+"K";
-
+function formatNumber(num) {
+    if (num >= 1000000000) return (num / 1000000000).toFixed(2) + "B";
+    if (num >= 1000000) return (num / 1000000).toFixed(2) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(2) + "K";
     return num;
 }
 
-function inflation(item){
-
-    return ((item.rap-item.previous)/item.previous)*100;
+function inflation(item) {
+    if (!item.previous || item.previous === 0) return 0;
+    return ((item.rap - item.previous) / item.previous) * 100;
 }
 
-function render(list){
+function render(list) {
 
-    itemContainer.innerHTML="";
+    itemContainer.innerHTML = "";
 
-    document.getElementById("totalItems").textContent=list.length;
+    document.getElementById("totalItems").textContent = list.length;
 
-    let inflated=0;
+    let inflated = 0;
 
-    list.forEach(item=>{
+    list.forEach(item => {
 
-        const percent=inflation(item);
+        const percent = inflation(item);
 
-        let badge="Normal";
-        let color="badge-normal";
+        let badge = "Normal";
+        let color = "badge-normal";
 
-        if(percent>=20){
-
-            badge="Inflated";
-
-            color="badge-inflated";
-
+        if (percent >= 20) {
+            badge = "Inflated";
+            color = "badge-inflated";
             inflated++;
-
         }
 
-        itemContainer.innerHTML+=`
+        itemContainer.innerHTML += `
+        <div class="col-md-4 col-lg-3 item-card">
+            <div class="card">
 
-<div class="col-md-4 col-lg-3 item-card">
+                <img src="${item.image || "https://placehold.co/300x300?text=PS99"}">
 
-<div class="card">
+                <div class="card-body">
 
-<img src="${item.image}">
+                    <div class="item-name">
+                        ${item.name}
+                    </div>
 
-<div class="card-body">
+                    <div class="text-secondary">
+                        ${item.type || "Unknown"}
+                    </div>
 
-<div class="item-name">
+                    <div class="item-rap">
+                        💎 ${formatNumber(item.rap)}
+                    </div>
 
-${item.name}
+                    <div class="mt-2">
+                        <span class="badge ${color}">
+                            ${badge}
+                        </span>
+                    </div>
 
-</div>
+                    <div class="mt-2">
+                        ${percent.toFixed(1)}%
+                    </div>
 
-<div class="text-secondary">
+                </div>
 
-${item.type}
-
-</div>
-
-<div class="item-rap">
-
-💎 ${formatNumber(item.rap)}
-
-</div>
-
-<div class="mt-2">
-
-<span class="badge ${color}">
-
-${badge}
-
-</span>
-
-</div>
-
-<div class="mt-2">
-
-${percent.toFixed(1)}%
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-`;
-
+            </div>
+        </div>
+        `;
     });
 
-    document.getElementById("inflatedItems").textContent=inflated;
+    document.getElementById("inflatedItems").textContent = inflated;
+    document.getElementById("updatedTime").textContent = new Date().toLocaleTimeString();
+}
 
-    document.getElementById("updatedTime").textContent=
-    new Date().toLocaleTimeString();
+async function loadData() {
+
+    try {
+
+        const response = await fetch(API_URL);
+
+        const data = await response.json();
+
+        items = data.items;
+
+        render(items);
+
+    } catch (err) {
+
+        console.error(err);
+
+        itemContainer.innerHTML =
+            "<h3 style='color:red'>Failed to load API.</h3>";
+
+    }
 
 }
 
-render(items);
+// Search
+searchInput.addEventListener("input", () => {
 
-searchInput.addEventListener("input",()=>{
-
-    const value=searchInput.value.toLowerCase();
+    const value = searchInput.value.toLowerCase();
 
     render(
-
-        items.filter(i=>
-
-            i.name.toLowerCase().includes(value)
-
+        items.filter(item =>
+            item.name.toLowerCase().includes(value)
         )
-
     );
 
 });
+
+// Load immediately
+loadData();
+
+// Refresh every 30 seconds
+setInterval(loadData, 30000);
