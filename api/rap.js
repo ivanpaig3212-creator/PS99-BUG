@@ -1,22 +1,16 @@
-export default async function handler(req, res) {
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
-
-    res.status(200).json({
-        success: true,
-        version: "0.2",
-        updated: new Date().toISOString(),
-        message: "PS99 BUG API is running!",
-        items: [
-            {
-                name: "Huge Happy Rock",
-                rap: 120000000
-            },
-            {
-                name: "Huge Cat",
-                rap: 890000000
-            }
-        ]
-    });
-
-}
+items: [
+  {
+    name: "Huge Happy Rock",
+    rap: 120000000,
+    previous: 100000000,
+    type: "Huge",
+    image: "https://placehold.co/300x300?text=Huge+Happy+Rock"
+  },
+  {
+    name: "Huge Cat",
+    rap: 890000000,
+    previous: 850000000,
+    type: "Huge",
+    image: "https://placehold.co/300x300?text=Huge+Cat"
+  }
+]
