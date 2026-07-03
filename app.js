@@ -21,40 +21,43 @@ async function fetchLiveRAP() {
 
         lastUpdated.textContent = `Live • Updated ${new Date().toLocaleTimeString()}`;
 
+        const previousData = JSON.parse(localStorage.getItem('ps99_previous_rap') || '{}');
+
         allItems = rapData.data.map(rapItem => {
             const existsItem = existsData.data.find(e => 
                 e.configData?.id === rapItem.configData?.id
             );
 
+            const name = rapItem.configData?.id || "Unknown";
             const rap = rapItem.value || 0;
             const exists = existsItem?.value || 0;
-            const name = rapItem.configData?.id || "Unknown";
             let category = rapItem.category || "Misc";
 
-            // Smart Inflation Detection (much stricter)
-            const rapPerExist = exists > 0 ? rap / exists : 0;
-            const isInflated = 
-                (rap > 10_000_000 && exists < 5000) ||           // Very high value + low supply
-                (rapPerExist > 80000) ||                         // Extremely expensive per copy
-                (rap > 200_000_000);                             // Ultra high RAP items
+            const previousRap = previousData[name] || rap;
+            const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
 
-            // Categorize Gifts & Exclusive
-            if (name.toLowerCase().includes('gift') || name.toLowerCase().includes('present')) {
-                category = 'Gift';
-            }
-            if (name.toLowerCase().includes('exclusive') || name.toLowerCase().includes('limited')) {
-                category = 'Exclusive';
-            }
+            // Smart Inflation Detection - 15%+ jump
+            const isInflated = changePercent >= 15;
+
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('gift') || lowerName.includes('present')) category = 'Gift';
+            if (lowerName.includes('exclusive') || lowerName.includes('limited')) category = 'Exclusive';
 
             return {
                 name,
                 category,
                 rap,
                 exists,
+                previousRap,
+                changePercent: Math.round(changePercent),
                 isInflated,
                 thumbnail: rapItem.configData?.thumbnail || ""
             };
         });
+
+        const newPreviousData = {};
+        allItems.forEach(item => newPreviousData[item.name] = item.rap);
+        localStorage.setItem('ps99_previous_rap', JSON.stringify(newPreviousData));
 
         loading.style.display = 'none';
         renderItems(allItems);
@@ -62,7 +65,7 @@ async function fetchLiveRAP() {
     } catch (e) {
         console.error(e);
         loading.style.display = 'none';
-        results.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding:40px;">Failed to load data. Try again later.</p>`;
+        results.innerHTML = `<p style="color:#ff6b6b;text-align:center;padding:40px;">Failed to load data</p>`;
     }
 }
 
@@ -70,19 +73,20 @@ function renderItems(items) {
     const results = document.getElementById('results');
     results.innerHTML = '';
 
-    if (items.length === 0) {
-        results.innerHTML = `<p style="text-align:center; padding:30px; color:#888;">No items found.</p>`;
-        return;
-    }
-
     items.forEach(item => {
         const imageUrl = item.thumbnail 
             ? `https://ps99.biggamesapi.io/image/${item.thumbnail.split(':').pop()}`
-            : "https://via.placeholder.com/60?text=Item";
+            : "https://via.placeholder.com/60";
 
         const div = document.createElement('div');
         div.className = `item-row ${item.isInflated ? 'inflated' : ''}`;
-        
+
+        let changeHTML = '';
+        if (item.changePercent !== 0) {
+            const color = item.changePercent > 0 ? '#22ff88' : '#ff6b6b';
+            changeHTML = `<div style="color:${color}; font-size:0.85rem;">${item.changePercent > 0 ? '+' : ''}${item.changePercent}% since last check</div>`;
+        }
+
         div.innerHTML = `
             <div class="item-info">
                 <img src="${imageUrl}" class="item-img" onerror="this.style.display='none'">
@@ -94,6 +98,7 @@ function renderItems(items) {
             <div class="stats">
                 <div class="rap">${item.rap.toLocaleString()} 💎</div>
                 <div class="exists">${item.exists.toLocaleString()} exist</div>
+                ${changeHTML}
                 ${item.isInflated ? `<div class="inflated-badge">🔥 LIKELY INFLATED</div>` : ''}
             </div>
         `;
@@ -103,21 +108,16 @@ function renderItems(items) {
 
 function filterItems() {
     const searchTerm = document.getElementById('search').value.toLowerCase().trim();
-    
     let filtered = allItems;
 
-    // Apply current tab filter
     if (currentTab === 'inflated') {
         filtered = filtered.filter(item => item.isInflated);
     } else if (currentTab !== 'all') {
         filtered = filtered.filter(item => item.category === currentTab);
     }
 
-    // Apply search
     if (searchTerm.length > 0) {
-        filtered = filtered.filter(item => 
-            item.name.toLowerCase().includes(searchTerm)
-        );
+        filtered = filtered.filter(item => item.name.toLowerCase().includes(searchTerm));
     }
 
     renderItems(filtered);
@@ -125,16 +125,11 @@ function filterItems() {
 
 function switchTab(tab) {
     currentTab = tab;
-    
-    // Update active tab styling
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
-
-    // Re-filter
     filterItems();
 }
 
-// Auto load + refresh every 60 seconds
 document.addEventListener('DOMContentLoaded', () => {
     fetchLiveRAP();
     setInterval(fetchLiveRAP, 60000);
