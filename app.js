@@ -1,13 +1,13 @@
-// app.js
+// app.js - Professional PS99 Inflated RAP Tracker
 const API_BASE = "https://ps99.biggamesapi.io";
 
 async function fetchLiveRAP() {
-    const loadingEl = document.getElementById('loading');
-    const resultsEl = document.getElementById('results');
-    const lastUpdatedEl = document.getElementById('last-updated');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const lastUpdated = document.getElementById('last-updated');
 
-    loadingEl.style.display = 'block';
-    resultsEl.innerHTML = '';
+    loading.style.display = 'block';
+    results.innerHTML = '';
 
     try {
         const [rapRes, existsRes] = await Promise.all([
@@ -18,62 +18,81 @@ async function fetchLiveRAP() {
         const rapData = await rapRes.json();
         const existsData = await existsRes.json();
 
-        if (rapData.status !== "ok") throw new Error("API Error");
+        lastUpdated.textContent = `Live • Updated ${new Date().toLocaleTimeString()}`;
 
-        loadingEl.style.display = 'none';
-        lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        // Combine and filter for likely inflated items
+        const items = rapData.data.map(rapItem => {
+            const existsItem = existsData.data.find(e => 
+                e.configData?.id === rapItem.configData?.id
+            );
+            
+            const rap = rapItem.value || 0;
+            const exists = existsItem?.value || 0;
+            const name = rapItem.configData?.id || "Unknown";
+            const category = rapItem.category || "Item";
 
-        // Filter: Only high-value / potentially inflated pets (10M+ RAP)
-        const highValuePets = rapData.data
-            .filter(item => {
-                const value = item.value || 0;
-                return value > 10_000_000 && 
-                       (item.category === "Pet" || item.category === "Huge" || item.category === "Titanic");
-            })
-            .sort((a, b) => b.value - a.value); // Highest first
+            // Score for "inflated" detection (high RAP + relatively low supply)
+            const inflatedScore = exists > 0 ? (rap / exists) : rap;
 
-        if (highValuePets.length === 0) {
-            resultsEl.innerHTML = "<p>No high-value pets found at the moment.</p>";
+            return {
+                ...rapItem,
+                exists: exists,
+                inflatedScore: inflatedScore,
+                name: name,
+                category: category
+            };
+        });
+
+        // Filter: High value OR suspicious ratio (likely manipulated)
+        const suspiciousItems = items
+            .filter(item => item.rap > 500_000) // Minimum RAP
+            .sort((a, b) => b.inflatedScore - a.inflatedScore); // Most suspicious first
+
+        loading.style.display = 'none';
+
+        if (suspiciousItems.length === 0) {
+            results.innerHTML = "<p>No suspicious activity detected right now.</p>";
             return;
         }
 
-        highValuePets.forEach(item => {
-            const name = item.configData.id || "Unknown Pet";
-            const value = item.value.toLocaleString();
-            const category = item.category || "Pet";
+        suspiciousItems.forEach(item => {
+            const rap = item.value.toLocaleString();
+            const exists = item.exists.toLocaleString();
+            const name = item.name;
+            const category = item.category;
 
-            // Try to get thumbnail from config (fallback image)
-            const thumbnail = item.configData.thumbnail || 
-                            item.configData.goldenThumbnail || "";
-
+            const thumbnail = item.configData?.thumbnail || "";
             const imageUrl = thumbnail 
                 ? `https://ps99.biggamesapi.io/image/${thumbnail.split(':').pop()}`
-                : "https://via.placeholder.com/80?text=Pet";
+                : "https://via.placeholder.com/64?text=Item";
 
             const div = document.createElement('div');
-            div.className = "rap-item";
+            div.className = "item-row";
             div.innerHTML = `
                 <div class="item-info">
-                    <img src="${imageUrl}" alt="${name}" class="pet-img" onerror="this.src='https://via.placeholder.com/80?text=Pet'">
+                    <img src="${imageUrl}" alt="${name}" class="item-img" onerror="this.style.display='none'">
                     <div>
-                        <strong>${name}</strong>
-                        <small>${category}</small>
+                        <div class="item-name">${name}</div>
+                        <div class="item-category">${category}</div>
                     </div>
                 </div>
-                <div class="value">${value} 💎</div>
+                <div class="stats">
+                    <div><strong>${rap}</strong> 💎</div>
+                    <div class="exists">${exists} exist</div>
+                </div>
             `;
-            resultsEl.appendChild(div);
+            results.appendChild(div);
         });
 
-    } catch (error) {
-        console.error(error);
-        loadingEl.style.display = 'none';
-        resultsEl.innerHTML = `<p style="color:red;text-align:center;">Failed to load data. Try again.</p>`;
+    } catch (err) {
+        console.error(err);
+        loading.style.display = 'none';
+        results.innerHTML = `<p style="color:#ff6b6b;text-align:center;">Error loading data. Please refresh.</p>`;
     }
 }
 
-// Auto refresh every 60 seconds
+// Auto refresh
 document.addEventListener('DOMContentLoaded', () => {
     fetchLiveRAP();
-    setInterval(fetchLiveRAP, 60000);
+    setInterval(fetchLiveRAP, 45000); // every 45 seconds
 });
