@@ -27,49 +27,80 @@ async function fetchLiveRAP() {
         const now = Date.now();
         const THIRTY_MINUTES = 30 * 60 * 1000;
 
-        allItems = rapData.data.map(rapItem => {
-            const existsItem = existsData.data.find(e => 
-                e.configData?.id === rapItem.configData?.id
-            );
+        allItems = rapData.data
+            .map(rapItem => {
+                const existsItem = existsData.data.find(e => 
+                    e.configData?.id === rapItem.configData?.id
+                );
 
-            const name = rapItem.configData?.id || "Unknown";
-            const rap = rapItem.value || 0;
-            const exists = existsItem?.value || 0;
-            let category = rapItem.category || "Misc";
+                const name = rapItem.configData?.id || "Unknown";
+                const rap = rapItem.value || 0;
+                const exists = existsItem?.value || 0;
+                let category = rapItem.category || "Misc";
 
-            const config = rapItem.configData || {};
-            let variant = "";
-            if (config.pt === 1) variant = "Golden";
-            if (config.pt === 2) variant = "Rainbow";
-            if (config.sh === true) variant = variant ? `Shiny ${variant}` : "Shiny";
+                const config = rapItem.configData || {};
+                
+                let variant = "";
+                if (config.pt === 1) variant = "Golden";
+                if (config.pt === 2) variant = "Rainbow";
+                if (config.sh === true) variant = variant ? `Shiny ${variant}` : "Shiny";
 
-            const displayName = variant ? `${variant} ${name}` : name;
+                const displayName = variant ? `${variant} ${name}` : name;
 
-            const previousRap = previousData[displayName] || rap;
-            const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
+                const previousRap = previousData[displayName] || rap;
+                const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
 
-            const isInflated = changePercent >= 10;
-            const isDeflated = changePercent <= -10;
+                const isInflated = changePercent >= 10;
+                const isDeflated = changePercent <= -10;
 
-            const lowerName = name.toLowerCase();
-            if (lowerName.includes('gift') || lowerName.includes('present')) category = 'Gift';
-            if (lowerName.includes('exclusive') || lowerName.includes('limited')) category = 'Exclusive';
+                const lowerName = name.toLowerCase();
+                if (lowerName.includes('gift') || lowerName.includes('present')) category = 'Gift';
 
-            return {
-                name: displayName,
-                originalName: name,
-                category,
-                variant,
-                rap,
-                exists,
-                previousRap,
-                changePercent: Math.round(changePercent),
-                isInflated,
-                isDeflated,
-                thumbnail: config.thumbnail || config.goldenThumbnail || ""
-            };
-        });
+                return {
+                    name: displayName,
+                    originalName: name,
+                    category,
+                    variant,
+                    rap,
+                    exists,
+                    previousRap,
+                    changePercent: Math.round(changePercent),
+                    isInflated,
+                    isDeflated,
+                    thumbnail: config.thumbnail || config.goldenThumbnail || ""
+                };
+            })
+            // Filter logic
+            .filter(item => {
+                const lowerName = item.originalName.toLowerCase();
 
+                // === PETS: Keep Huges, Titanics, Gargantuans + variants ===
+                if (item.category === "Pet") {
+                    const isSpecialPet = item.variant || 
+                                         lowerName.includes("huge") ||
+                                         lowerName.includes("titanic") ||
+                                         lowerName.includes("gargantuan");
+                    return isSpecialPet;
+                }
+
+                // === ENCHANTS: Only keep exclusive ones ===
+                if (item.category === "Enchant") {
+                    return lowerName.includes("exclusive");
+                }
+
+                // === CHARMS & ITEMS: Remove farmable ones (keep only special if any) ===
+                if (item.category === "Charm" || item.category === "Item" || item.category === "MiscItems") {
+                    // Keep only if it looks special/limited
+                    return lowerName.includes("exclusive") || 
+                           lowerName.includes("limited") || 
+                           lowerName.includes("event");
+                }
+
+                // Keep everything else (Gifts, Eggs, etc.)
+                return true;
+            });
+
+        // Save previous data
         if (now - lastSavedTime > THIRTY_MINUTES) {
             const newData = {};
             allItems.forEach(item => newData[item.name] = item.rap);
@@ -93,9 +124,13 @@ function renderItems(items) {
     const results = document.getElementById('results');
     results.innerHTML = '';
 
+    if (items.length === 0) {
+        results.innerHTML = `<p style="text-align:center; padding:40px; color:#888;">No items found.</p>`;
+        return;
+    }
+
     items.forEach(item => {
-        // Better image handling
-        let imageUrl = "https://via.placeholder.com/60?text=Pet";
+        let imageUrl = "https://via.placeholder.com/60?text=Item";
         
         if (item.thumbnail) {
             const id = item.thumbnail.split(':').pop();
@@ -122,7 +157,7 @@ function renderItems(items) {
 
         div.innerHTML = `
             <div class="item-info">
-                <img src="${imageUrl}" class="item-img" onerror="this.src='https://via.placeholder.com/60?text=Pet'">
+                <img src="${imageUrl}" class="item-img" onerror="this.src='https://via.placeholder.com/60?text=Item'">
                 <div>
                     <div class="item-name">${item.name}</div>
                     <div class="item-category">${item.category} ${item.variant ? `• ${item.variant}` : ''}</div>
@@ -164,7 +199,7 @@ function showItemModal(item) {
             </div>
 
             <div style="background:#111;padding:15px;border-radius:10px;margin-bottom:15px;">
-                <div style="color:#888;font-size:0.85rem;margin-bottom:4px;">Previous RAP (last check)</div>
+                <div style="color:#888;font-size:0.85rem;margin-bottom:4px;">Previous RAP</div>
                 <div style="font-size:1.3rem;color:#ccc;">${previousText}</div>
                 
                 <div style="margin-top:10px;">
@@ -173,11 +208,6 @@ function showItemModal(item) {
                         ${item.changePercent >= 0 ? '▲' : '▼'} ${item.changePercent}%
                     </div>
                 </div>
-            </div>
-
-            <div style="font-size:0.8rem;color:#666;margin-bottom:20px;text-align:center;">
-                Full long-term RAP history is available on <strong>ps99rap.com</strong><br>
-                This shows change since your last visit.
             </div>
 
             <button onclick="this.closest('.modal').remove()" 
