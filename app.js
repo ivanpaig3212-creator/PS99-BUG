@@ -33,10 +33,21 @@ async function fetchLiveRAP() {
             const exists = existsItem?.value || 0;
             let category = rapItem.category || "Misc";
 
-            const previousRap = previousData[name] || rap;
+            // === VARIANT DETECTION ===
+            const config = rapItem.configData || {};
+            let variant = "";
+
+            if (config.pt === 1) variant = "Golden";
+            if (config.pt === 2) variant = "Rainbow";
+            if (config.sh === true) variant = variant ? `Shiny ${variant}` : "Shiny";
+
+            // Combine name + variant for display
+            const displayName = variant ? `${variant} ${name}` : name;
+
+            const previousRap = previousData[displayName] || rap;
             const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
 
-            // 10% threshold for both inflation and deflation
+            // 10% threshold
             const isInflated = changePercent >= 10;
             const isDeflated = changePercent <= -10;
 
@@ -46,19 +57,21 @@ async function fetchLiveRAP() {
             if (lowerName.includes('exclusive') || lowerName.includes('limited')) category = 'Exclusive';
 
             return {
-                name,
+                name: displayName,
+                originalName: name,
                 category,
+                variant,
                 rap,
                 exists,
                 previousRap,
                 changePercent: Math.round(changePercent),
                 isInflated,
                 isDeflated,
-                thumbnail: rapItem.configData?.thumbnail || ""
+                thumbnail: config.thumbnail || config.goldenThumbnail || ""
             };
         });
 
-        // Save current data for next comparison
+        // Save current data
         const newPreviousData = {};
         allItems.forEach(item => newPreviousData[item.name] = item.rap);
         localStorage.setItem('ps99_previous_rap', JSON.stringify(newPreviousData));
@@ -85,7 +98,6 @@ function renderItems(items) {
         const div = document.createElement('div');
         div.className = `item-row ${item.isInflated ? 'inflated' : ''} ${item.isDeflated ? 'deflated' : ''}`;
 
-        // Percentage change display
         let changeHTML = '';
         if (item.changePercent !== 0) {
             const isPositive = item.changePercent > 0;
@@ -94,7 +106,6 @@ function renderItems(items) {
             changeHTML = `<div style="color:${color}; font-size:0.9rem; font-weight:600;">${arrow} ${item.changePercent}%</div>`;
         }
 
-        // Badges
         let badgeHTML = '';
         if (item.isInflated) {
             badgeHTML = `<div class="inflated-badge">🔥 INFLATED</div>`;
@@ -107,7 +118,7 @@ function renderItems(items) {
                 <img src="${imageUrl}" class="item-img" onerror="this.style.display='none'">
                 <div>
                     <div class="item-name">${item.name}</div>
-                    <div class="item-category">${item.category}</div>
+                    <div class="item-category">${item.category} ${item.variant ? `• ${item.variant}` : ''}</div>
                 </div>
             </div>
             <div class="stats">
@@ -134,7 +145,10 @@ function filterItems() {
     }
 
     if (searchTerm.length > 0) {
-        filtered = filtered.filter(item => item.name.toLowerCase().includes(searchTerm));
+        filtered = filtered.filter(item => 
+            item.name.toLowerCase().includes(searchTerm) ||
+            item.originalName.toLowerCase().includes(searchTerm)
+        );
     }
 
     renderItems(filtered);
