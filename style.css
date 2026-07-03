@@ -6,61 +6,66 @@ body {
   padding: 20px;
 }
 
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-}
+.container { max-width: 900px; margin: 0 auto; }
 
 h1 {
   text-align: center;
-  color: #00ff88;
+  color: #ff4444;
+  margin-bottom: 5px;
 }
 
 .updated {
   text-align: center;
-  color: #aaa;
-  font-size: 0.9em;
+  color: #888;
+  font-size: 0.95em;
 }
 
-#loading {
-  text-align: center;
-  padding: 20px;
-  font-size: 1.1em;
-}
+#loading { text-align: center; padding: 30px; font-size: 1.1em; }
 
 .results {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .rap-item {
   background: #1a1a1a;
-  padding: 15px;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-left: 4px solid #00ff88;
+  border-left: 5px solid #ff4444;
 }
 
-.item-info small {
-  color: #888;
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pet-img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  background: #222;
+  border-radius: 8px;
 }
 
 .value {
-  font-size: 1.3em;
+  font-size: 1.4em;
   font-weight: bold;
-  color: #00ff88;
+  color: #ffdd00;
+  text-align: right;
 }
 
 .refresh-btn {
   display: block;
-  margin: 20px auto;
-  padding: 12px 24px;
-  background: #00ff88;
-  color: black;
+  margin: 25px auto;
+  padding: 14px 28px;
+  background: #ff4444;
+  color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: bold;
+  border-radius: 10px;
+  font-size: 1.1em;
   cursor: pointer;
 }
