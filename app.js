@@ -1,300 +1,743 @@
-const API_BASE = "https://ps99.biggamesapi.io";
-let allItems = [];
-let currentTab = 'all';
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.text.DecimalFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
-async function fetchLiveRAP() {
-    const loading = document.getElementById('loading');
-    const results = document.getElementById('results');
-    const lastUpdated = document.getElementById('last-updated');
+public class Franco extends JFrame {
 
-    loading.style.display = 'block';
-    results.innerHTML = '';
+    // =========================
+    // PRODUCT CLASS
+    // =========================
 
-    try {
-        const [rapRes, existsRes] = await Promise.all([
-            fetch(`${API_BASE}/api/rap`),
-            fetch(`${API_BASE}/api/exists`)
-        ]);
+    static class Product {
+        String name;
+        double price;
 
-        const rapData = await rapRes.json();
-        const existsData = await existsRes.json();
+        Product(String name, double price) {
+            this.name = name;
+            this.price = price;
+        }
 
-        lastUpdated.textContent = `Live • Updated ${new Date().toLocaleTimeString()}`;
+        @Override
+        public String toString() {
+            return name + " - ₱" + String.format("%.2f", price);
+        }
+    }
 
-        const saved = JSON.parse(localStorage.getItem('ps99_rap_data') || '{}');
-        const previousData = saved.data || {};
-        const lastSavedTime = saved.timestamp || 0;
-        const now = Date.now();
-        const THIRTY_MINUTES = 30 * 60 * 1000;
+    // =========================
+    // VARIABLES
+    // =========================
 
-        allItems = rapData.data
-            .map(rapItem => {
-                const existsItem = existsData.data.find(e => 
-                    e.configData?.id === rapItem.configData?.id
+    private final Map<String, Product> products = new LinkedHashMap<>();
+
+    private JComboBox<Product> productComboBox;
+    private JSpinner quantitySpinner;
+
+    private DefaultTableModel tableModel;
+    private JTable cartTable;
+
+    private JLabel subtotalLabel;
+    private JLabel taxLabel;
+    private JLabel totalLabel;
+    private JLabel changeLabel;
+
+    private JTextField paymentField;
+
+    private static final double TAX_RATE = 0.12;
+
+    private final DecimalFormat moneyFormat =
+            new DecimalFormat("₱#,##0.00");
+
+    // =========================
+    // CONSTRUCTOR
+    // =========================
+
+    public Franco() {
+
+        // Add products
+        products.put("Burger",
+                new Product("Burger", 75.00));
+
+        products.put("French Fries",
+                new Product("French Fries", 50.00));
+
+        products.put("Pizza",
+                new Product("Pizza", 250.00));
+
+        products.put("Fried Chicken",
+                new Product("Fried Chicken", 120.00));
+
+        products.put("Soft Drink",
+                new Product("Soft Drink", 35.00));
+
+        products.put("Coffee",
+                new Product("Coffee", 60.00));
+
+        products.put("Ice Cream",
+                new Product("Ice Cream", 45.00));
+
+        // Window settings
+        setTitle("Java Point of Sale System");
+        setSize(850, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        createGUI();
+    }
+
+    // =========================
+    // CREATE GUI
+    // =========================
+
+    private void createGUI() {
+
+        JPanel mainPanel =
+                new JPanel(new BorderLayout(10, 10));
+
+        mainPanel.setBorder(
+                BorderFactory.createEmptyBorder(
+                        10, 10, 10, 10
+                )
+        );
+
+        // =========================
+        // PRODUCT PANEL
+        // =========================
+
+        JPanel productPanel =
+                new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        productPanel.setBorder(
+                BorderFactory.createTitledBorder(
+                        "Select Product"
+                )
+        );
+
+        productComboBox =
+                new JComboBox<>(
+                        products.values().toArray(
+                                new Product[0]
+                        )
                 );
 
-                const name = rapItem.configData?.id || "Unknown";
-                const rap = rapItem.value || 0;
-                const exists = existsItem?.value || 0;
-                let category = rapItem.category || "Misc";
+        quantitySpinner =
+                new JSpinner(
+                        new SpinnerNumberModel(
+                                1, 1, 100, 1
+                        )
+                );
 
-                const config = rapItem.configData || {};
-                
-                let variant = "";
-                if (config.pt === 1) variant = "Golden";
-                if (config.pt === 2) variant = "Rainbow";
-                if (config.sh === true) variant = variant ? `Shiny ${variant}` : "Shiny";
+        JButton addButton =
+                new JButton("Add to Cart");
 
-                const displayName = variant ? `${variant} ${name}` : name;
+        productPanel.add(
+                new JLabel("Product:")
+        );
 
-                const previousRap = previousData[displayName] || rap;
-                const changePercent = previousRap > 0 ? ((rap - previousRap) / previousRap) * 100 : 0;
+        productPanel.add(
+                productComboBox
+        );
 
-                const isInflated = changePercent >= 10;
-                const isDeflated = changePercent <= -10;
+        productPanel.add(
+                new JLabel("Quantity:")
+        );
 
-                const lowerName = name.toLowerCase();
-                if (lowerName.includes('gift') || lowerName.includes('present')) category = 'Gift';
+        productPanel.add(
+                quantitySpinner
+        );
 
-                return {
-                    name: displayName,
-                    originalName: name,
-                    category,
-                    variant,
-                    rap,
-                    exists,
-                    previousRap,
-                    changePercent: Math.round(changePercent),
-                    isInflated,
-                    isDeflated,
-                    thumbnail: config.thumbnail || config.goldenThumbnail || ""
+        productPanel.add(
+                addButton
+        );
+
+        mainPanel.add(
+                productPanel,
+                BorderLayout.NORTH
+        );
+
+        // =========================
+        // CART TABLE
+        // =========================
+
+        String[] columns = {
+                "Product",
+                "Price",
+                "Quantity",
+                "Total"
+        };
+
+        tableModel =
+                new DefaultTableModel(columns, 0) {
+
+                    @Override
+                    public boolean isCellEditable(
+                            int row,
+                            int column
+                    ) {
+                        return false;
+                    }
                 };
-            })
-            // Filter logic
-            .filter(item => {
-                const lowerName = item.originalName.toLowerCase();
 
-                if (item.category === "Pet") {
-                    const isSpecialPet = item.variant || 
-                                         lowerName.includes("huge") ||
-                                         lowerName.includes("titanic") ||
-                                         lowerName.includes("gargantuan");
-                    return isSpecialPet;
-                }
+        cartTable =
+                new JTable(tableModel);
 
-                if (item.category === "Enchant") {
-                    return lowerName.includes("exclusive");
-                }
+        cartTable.setRowHeight(25);
 
-                if (item.category === "Charm" || item.category === "Item" || item.category === "MiscItems") {
-                    return lowerName.includes("exclusive") || 
-                           lowerName.includes("limited") || 
-                           lowerName.includes("event");
-                }
+        JScrollPane scrollPane =
+                new JScrollPane(cartTable);
 
-                return true;
-            });
+        mainPanel.add(
+                scrollPane,
+                BorderLayout.CENTER
+        );
 
-        if (now - lastSavedTime > THIRTY_MINUTES) {
-            const newData = {};
-            allItems.forEach(item => newData[item.name] = item.rap);
-            localStorage.setItem('ps99_rap_data', JSON.stringify({
-                data: newData,
-                timestamp: now
-            }));
-        }
+        // =========================
+        // BOTTOM PANEL
+        // =========================
 
-        loading.style.display = 'none';
-        renderItems(allItems);
+        JPanel bottomPanel =
+                new JPanel(
+                        new BorderLayout(10, 10)
+                );
 
-    } catch (e) {
-        console.error(e);
-        loading.style.display = 'none';
-        results.innerHTML = `<p style="color:#ff6b6b;text-align:center;padding:40px;">Failed to load data</p>`;
-    }
-}
+        // =========================
+        // BUTTONS
+        // =========================
 
-function renderItems(items) {
-    const results = document.getElementById('results');
-    results.innerHTML = '';
+        JPanel buttonPanel =
+                new JPanel(
+                        new FlowLayout(FlowLayout.LEFT)
+                );
 
-    if (items.length === 0) {
-        results.innerHTML = `<p style="text-align:center; padding:40px; color:#888;">No items found.</p>`;
-        return;
-    }
+        JButton removeButton =
+                new JButton("Remove Selected");
 
-    items.forEach(item => {
-        let imageUrl = "https://via.placeholder.com/60?text=Item";
-        
-        if (item.thumbnail) {
-            const id = item.thumbnail.split(':').pop();
-            if (id && !isNaN(id)) {
-                imageUrl = `https://ps99.biggamesapi.io/image/${id}`;
-            }
-        }
+        JButton clearButton =
+                new JButton("Clear Cart");
 
-        const div = document.createElement('div');
-        div.className = `item-row ${item.isInflated ? 'inflated' : ''} ${item.isDeflated ? 'deflated' : ''}`;
-        div.style.cursor = 'pointer';
-        div.onclick = () => showItemModal(item);
+        JButton checkoutButton =
+                new JButton("Checkout");
 
-        let changeHTML = '';
-        if (item.changePercent !== 0) {
-            const color = item.changePercent > 0 ? '#22ff88' : '#ff6b6b';
-            const arrow = item.changePercent > 0 ? '▲' : '▼';
-            changeHTML = `<div style="color:${color}; font-size:0.9rem; font-weight:600;">${arrow} ${item.changePercent}%</div>`;
-        }
+        buttonPanel.add(removeButton);
+        buttonPanel.add(clearButton);
+        buttonPanel.add(checkoutButton);
 
-        let badgeHTML = '';
-        if (item.isInflated) badgeHTML = `<div class="inflated-badge">🔥 INFLATED</div>`;
-        if (item.isDeflated) badgeHTML = `<div class="deflated-badge">📉 DEFLATED</div>`;
+        bottomPanel.add(
+                buttonPanel,
+                BorderLayout.NORTH
+        );
 
-        div.innerHTML = `
-            <div class="item-info">
-                <img src="${imageUrl}" class="item-img" onerror="this.src='https://via.placeholder.com/60?text=Item'">
-                <div>
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-category">${item.category} ${item.variant ? `• ${item.variant}` : ''}</div>
-                </div>
-            </div>
-            <div class="stats">
-                <div class="rap">${item.rap.toLocaleString()} 💎</div>
-                <div class="exists">${item.exists.toLocaleString()} exist</div>
-                ${changeHTML}
-                ${badgeHTML}
-            </div>
-        `;
-        results.appendChild(div);
-    });
-}
+        // =========================
+        // PAYMENT PANEL
+        // =========================
 
-async function showItemModal(item) {
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
-    
-    modal.innerHTML = `
-        <div style="background:#1a1a1a;padding:25px;border-radius:16px;max-width:700px;width:95%;border:1px solid #333;">
-            <h2 style="margin-bottom:8px;">${item.name}</h2>
-            <p style="color:#888;margin-bottom:15px;">${item.category} ${item.variant ? `• ${item.variant}` : ''}</p>
-            
-            <div style="margin:20px 0; min-height: 320px; display: flex; align-items: center; justify-content: center;">
-                <canvas id="rapChart" width="650" height="320"></canvas>
-            </div>
+        JPanel paymentPanel =
+                new JPanel(
+                        new GridLayout(5, 2, 10, 5)
+                );
 
-            <div style="text-align:center;margin-bottom:15px;">
-                <small style="color:#666;">Trying to load history from ps99rap.com...</small>
-            </div>
+        paymentPanel.setBorder(
+                BorderFactory.createTitledBorder(
+                        "Payment"
+                )
+        );
 
-            <button onclick="this.closest('.modal').remove()" 
-                    style="width:100%;padding:14px;background:#ff4757;color:white;border:none;border-radius:10px;font-size:1rem;cursor:pointer;">
-                Close
-            </button>
-        </div>
-    `;
-    document.body.appendChild(modal);
+        subtotalLabel =
+                new JLabel("₱0.00");
 
-    // Fetch real RAP history using CORS proxy
-    try {
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-            `https://ps99rap.com/api/item/${item.originalName}/rap_history`
-        )}`;
+        taxLabel =
+                new JLabel("₱0.00");
 
-        const res = await fetch(proxyUrl);
-        
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-        }
+        totalLabel =
+                new JLabel("₱0.00");
 
-        const data = await res.json();
+        paymentField =
+                new JTextField();
 
-        if (data && data.success && data.data && data.data.length > 0) {
-            const canvas = document.getElementById('rapChart');
-            if (canvas) canvas.outerHTML = `<canvas id="rapChart" width="650" height="320"></canvas>`;
-            drawRealChart(data.data);
-        } else {
-            document.getElementById('rapChart').outerHTML = `
-                <div style="text-align:center; padding: 60px 20px; color:#888;">
-                    <p>No historical data available for this item yet.</p>
-                    <p style="font-size:0.9rem; margin-top:10px;">This can happen with newer or less traded items.</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error("History fetch error:", error);
-        document.getElementById('rapChart').outerHTML = `
-            <div style="text-align:center; padding: 60px 20px; color:#ff6b6b;">
-                <p>Failed to load history from ps99rap.com</p>
-                <p style="font-size:0.85rem; margin-top:8px; color:#888;">${error.message}</p>
-            </div>
-        `;
-    }
-}
+        changeLabel =
+                new JLabel("₱0.00");
 
-function drawRealChart(historyData) {
-    const ctx = document.getElementById('rapChart');
-    if (!ctx) return;
+        paymentPanel.add(
+                new JLabel("Subtotal:")
+        );
 
-    const labels = historyData.map(h => new Date(h[0] * 1000).toLocaleDateString());
-    const values = historyData.map(h => h[1]);
+        paymentPanel.add(
+                subtotalLabel
+        );
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'RAP History',
-                data: values,
-                borderColor: '#ff4757',
-                backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                borderWidth: 2.5,
-                tension: 0.3,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: { 
-                    ticks: { color: '#aaa' },
-                    grid: { color: '#333' }
-                },
-                x: { 
-                    ticks: { color: '#aaa', maxTicksLimit: 8 },
-                    grid: { color: '#333' }
-                }
-            }
-        }
-    });
-}
+        paymentPanel.add(
+                new JLabel("Tax (12%):")
+        );
 
-function filterItems() {
-    const searchTerm = document.getElementById('search').value.toLowerCase().trim();
-    let filtered = allItems;
+        paymentPanel.add(
+                taxLabel
+        );
 
-    if (currentTab === 'inflated') filtered = filtered.filter(i => i.isInflated);
-    else if (currentTab === 'deflated') filtered = filtered.filter(i => i.isDeflated);
-    else if (currentTab !== 'all') filtered = filtered.filter(i => i.category === currentTab);
+        paymentPanel.add(
+                new JLabel("Total:")
+        );
 
-    if (searchTerm) {
-        filtered = filtered.filter(i => 
-            i.name.toLowerCase().includes(searchTerm) || 
-            i.originalName.toLowerCase().includes(searchTerm)
+        paymentPanel.add(
+                totalLabel
+        );
+
+        paymentPanel.add(
+                new JLabel("Payment:")
+        );
+
+        paymentPanel.add(
+                paymentField
+        );
+
+        paymentPanel.add(
+                new JLabel("Change:")
+        );
+
+        paymentPanel.add(
+                changeLabel
+        );
+
+        bottomPanel.add(
+                paymentPanel,
+                BorderLayout.CENTER
+        );
+
+        mainPanel.add(
+                bottomPanel,
+                BorderLayout.SOUTH
+        );
+
+        add(mainPanel);
+
+        // =========================
+        // BUTTON ACTIONS
+        // =========================
+
+        addButton.addActionListener(
+                this::addProduct
+        );
+
+        removeButton.addActionListener(
+                e -> removeSelectedProduct()
+        );
+
+        clearButton.addActionListener(
+                e -> clearCart()
+        );
+
+        checkoutButton.addActionListener(
+                e -> checkout()
+        );
+
+        paymentField.addActionListener(
+                e -> calculateChange()
         );
     }
-    renderItems(filtered);
-}
 
-function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    filterItems();
-}
+    // =========================
+    // ADD PRODUCT
+    // =========================
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchLiveRAP();
-    setInterval(fetchLiveRAP, 60000);
-});
+    private void addProduct(ActionEvent e) {
+
+        Product product =
+                (Product) productComboBox.getSelectedItem();
+
+        if (product == null) {
+            return;
+        }
+
+        int quantity =
+                (Integer) quantitySpinner.getValue();
+
+        double itemTotal =
+                product.price * quantity;
+
+        tableModel.addRow(
+                new Object[]{
+                        product.name,
+                        moneyFormat.format(product.price),
+                        quantity,
+                        moneyFormat.format(itemTotal)
+                }
+        );
+
+        updateTotals();
+    }
+
+    // =========================
+    // REMOVE PRODUCT
+    // =========================
+
+    private void removeSelectedProduct() {
+
+        int selectedRow =
+                cartTable.getSelectedRow();
+
+        if (selectedRow == -1) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please select an item to remove.",
+                    "No Item Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return;
+        }
+
+        tableModel.removeRow(selectedRow);
+
+        updateTotals();
+    }
+
+    // =========================
+    // CLEAR CART
+    // =========================
+
+    private void clearCart() {
+
+        int choice =
+                JOptionPane.showConfirmDialog(
+                        this,
+                        "Are you sure you want to clear the cart?",
+                        "Clear Cart",
+                        JOptionPane.YES_NO_OPTION
+                );
+
+        if (choice == JOptionPane.YES_OPTION) {
+
+            tableModel.setRowCount(0);
+
+            paymentField.setText("");
+
+            changeLabel.setText("₱0.00");
+            changeLabel.setForeground(Color.BLACK);
+
+            updateTotals();
+        }
+    }
+
+    // =========================
+    // UPDATE TOTALS
+    // =========================
+
+    private void updateTotals() {
+
+        double subtotal = 0;
+
+        for (int row = 0;
+             row < tableModel.getRowCount();
+             row++) {
+
+            String totalText =
+                    tableModel
+                            .getValueAt(row, 3)
+                            .toString();
+
+            totalText =
+                    totalText
+                            .replace("₱", "")
+                            .replace(",", "");
+
+            try {
+                subtotal += Double.parseDouble(totalText);
+            } catch (NumberFormatException ex) {
+                // Ignore invalid table values
+            }
+        }
+
+        double tax =
+                subtotal * TAX_RATE;
+
+        double total =
+                subtotal + tax;
+
+        subtotalLabel.setText(
+                moneyFormat.format(subtotal)
+        );
+
+        taxLabel.setText(
+                moneyFormat.format(tax)
+        );
+
+        totalLabel.setText(
+                moneyFormat.format(total)
+        );
+
+        calculateChange();
+    }
+
+    // =========================
+    // CALCULATE CHANGE
+    // =========================
+
+    private void calculateChange() {
+
+        String paymentText =
+                paymentField.getText().trim();
+
+        if (paymentText.isEmpty()) {
+
+            changeLabel.setText("₱0.00");
+            changeLabel.setForeground(Color.BLACK);
+
+            return;
+        }
+
+        try {
+
+            double payment =
+                    Double.parseDouble(paymentText);
+
+            double total =
+                    getTotal();
+
+            double change =
+                    payment - total;
+
+            if (change < 0) {
+
+                changeLabel.setText(
+                        "Insufficient"
+                );
+
+                changeLabel.setForeground(
+                        Color.RED
+                );
+
+            } else {
+
+                changeLabel.setText(
+                        moneyFormat.format(change)
+                );
+
+                changeLabel.setForeground(
+                        Color.BLACK
+                );
+            }
+
+        } catch (NumberFormatException ex) {
+
+            changeLabel.setText("Invalid");
+
+            changeLabel.setForeground(
+                    Color.RED
+            );
+        }
+    }
+
+    // =========================
+    // GET TOTAL
+    // =========================
+
+    private double getTotal() {
+
+        String totalText =
+                totalLabel.getText();
+
+        totalText =
+                totalText
+                        .replace("₱", "")
+                        .replace(",", "");
+
+        try {
+
+            return Double.parseDouble(
+                    totalText
+            );
+
+        } catch (NumberFormatException e) {
+
+            return 0.0;
+        }
+    }
+
+    // =========================
+    // CHECKOUT
+    // =========================
+
+    private void checkout() {
+
+        if (tableModel.getRowCount() == 0) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The cart is empty.",
+                    "Checkout",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return;
+        }
+
+        String paymentText =
+                paymentField.getText().trim();
+
+        if (paymentText.isEmpty()) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter the payment amount.",
+                    "Payment Required",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return;
+        }
+
+        try {
+
+            double payment =
+                    Double.parseDouble(paymentText);
+
+            if (payment < 0) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Payment cannot be negative.",
+                        "Invalid Payment",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+            }
+
+            double total =
+                    getTotal();
+
+            if (payment < total) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Insufficient payment.\n"
+                                + "Required: "
+                                + moneyFormat.format(total)
+                                + "\nPaid: "
+                                + moneyFormat.format(payment),
+                        "Insufficient Payment",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+            }
+
+            double change =
+                    payment - total;
+
+            StringBuilder receipt =
+                    new StringBuilder();
+
+            receipt.append(
+                    "========== RECEIPT ==========\n\n"
+            );
+
+            for (int row = 0;
+                 row < tableModel.getRowCount();
+                 row++) {
+
+                String product =
+                        tableModel
+                                .getValueAt(row, 0)
+                                .toString();
+
+                String quantity =
+                        tableModel
+                                .getValueAt(row, 2)
+                                .toString();
+
+                String itemTotal =
+                        tableModel
+                                .getValueAt(row, 3)
+                                .toString();
+
+                receipt.append(product)
+                        .append(" x ")
+                        .append(quantity)
+                        .append(" = ")
+                        .append(itemTotal)
+                        .append("\n");
+            }
+
+            receipt.append(
+                    "\n-----------------------------\n"
+            );
+
+            receipt.append("Subtotal: ")
+                    .append(subtotalLabel.getText())
+                    .append("\n");
+
+            receipt.append("Tax: ")
+                    .append(taxLabel.getText())
+                    .append("\n");
+
+            receipt.append("Total: ")
+                    .append(totalLabel.getText())
+                    .append("\n");
+
+            receipt.append("Payment: ")
+                    .append(moneyFormat.format(payment))
+                    .append("\n");
+
+            receipt.append("Change: ")
+                    .append(moneyFormat.format(change));
+
+            receipt.append(
+                    "\n\nThank you for your purchase!"
+            );
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    receipt.toString(),
+                    "Transaction Complete",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+            // Clear transaction
+            tableModel.setRowCount(0);
+
+            paymentField.setText("");
+
+            changeLabel.setText("₱0.00");
+            changeLabel.setForeground(Color.BLACK);
+
+            updateTotals();
+
+        } catch (NumberFormatException ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid payment amount.",
+                    "Invalid Payment",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // =========================
+    // MAIN METHOD
+    // =========================
+
+    public static void main(String[] args) {
+
+        SwingUtilities.invokeLater(() -> {
+
+            try {
+
+                UIManager.setLookAndFeel(
+                        UIManager
+                                .getSystemLookAndFeelClassName()
+                );
+
+            } catch (Exception ignored) {
+                // Use default Look and Feel
+            }
+
+            Franco app = new Franco();
+            app.setVisible(true);
+        });
+    }
+}
